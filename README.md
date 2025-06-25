@@ -4,38 +4,13 @@ This repository contains the backend for the LearnOsphere online learning platfo
 
 ---
 
-## ✨ Features
+## ✨ Top Features
 
-* **User Authentication & Authorization:** Secure user registration, login, and access control using JSON Web Tokens (JWT).
-    * **JWT Creation (`/jwt`):** Issues a JWT token upon successful authentication, setting it as an HTTP-only cookie.
-    * **User Logout (`/logout`):** Clears the authentication cookie to log users out.
-    * **Token Verification (`varifyToken` middleware):** Protects routes by validating the JWT from incoming requests.
-* **User Management (`/user`):**
-    * **User Creation:** Allows new users to be registered in the database.
-    * **User Retrieval:** Fetches user details, including an aggregated list of `enrolledCourseIds` by performing a `$lookup` with the `enrollments` collection.
-    * **User Update:** Updates existing user profiles.
-* **Category Management (`/category`, `/categories`):**
-    * **Category Creation:** Adds new course categories.
-    * **Category Retrieval:** Fetches all categories, with options for `limit`, `sortBy`, and `orderBy` (e.g., `createdAt` for sorting).
-* **Course Management (`/course`, `/courses`):**
-    * **Course Creation:** Adds new courses to the platform.
-    * **Single Course Retrieval (`/course/:id`):** Fetches detailed information for a specific course, including aggregated `numberOfReview` and `averageRating` by performing a `$lookup` with the `reviews` collection.
-    * **All Courses Retrieval (`/course` or `/courses`):** Fetches a list of all courses.
-    * **Filtered/Sorted Courses (`/courses` with query parameters):** Supports filtering by `free`/`price` or `category`, and allows sorting by various fields (e.g., `createdAt`) with `limit` and `orderBy` options. This uses a comprehensive aggregation pipeline.
-    * **Mentor-Specific Courses (`/courses/:uid`):** Retrieves courses posted by a specific mentor, protected by `varifyToken` to ensure authorized access.
-    * **Course Update:** Modifies existing course details.
-    * **Course Deletion:** Removes courses from the database.
-* **Review Management (`/review`, `/reviewsByCourseId/:id`):**
-    * **Review Creation:** Allows users to submit reviews for courses.
-    * **Reviews by Course ID:** Fetches all reviews for a specific course, including reviewer `displayName` and `photoURL` by performing a `$lookup` with the `user` collection.
-    * **Review Deletion:** Deletes a specific review.
-* **Enrollment Management (`/enrollment`, `/enrollments/:uid`):**
-    * **Enroll/Unenroll (`/enrollment` with `enroll` status):** Handles both enrollment and unenrollment of users in courses using **MongoDB transactions** to ensure data consistency across `enrollments`, `courses` (incrementing/decrementing `totalEnrollment` and `RemainingSeat`), and `user` collections (incrementing/decrementing `totalEnrolled` and adding/removing `enrolledCourseIds`).
-    * **User Enrollments (`/enrollments/:uid`):** Fetches all enrollments for a specific user, including details of the enrolled courses.
-    * **Enrollment Deletion:** Allows the removal of an enrollment record.
-* **Blog Management (`/blog`, `/blogs`):**
-    * **Blog Post Creation:** Allows the addition of new blog posts.
-    * **Blog Post Retrieval:** Fetches all blog posts, including the author's display name and photo.
+* **Robust User Authentication & Authorization:** Implements secure user registration, login, and access control leveraging **JSON Web Tokens (JWT)**, specifically setting JWTs as HTTP-only cookies. Includes a dedicated `varifyToken` middleware for route protection.
+* **Atomic Enrollment & Unenrollment with MongoDB Transactions:** Manages user enrollment and unenrollment in courses using **MongoDB transactions**. This ensures critical data consistency across `enrollments`, `courses` (updating `totalEnrollment` and `RemainingSeat`), and `user` collections (modifying `totalEnrolled` and `enrolledCourseIds`) in a single, all-or-nothing operation.
+* **Advanced Course Management & Data Aggregation:** Offers sophisticated course retrieval with comprehensive filtering (by `free`/`price`, `category`), sorting (`createdAt`), and pagination options using a powerful **aggregation pipeline**. Detailed course information includes aggregated `numberOfReview` and `averageRating` through `$lookup` operations with the `reviews` collection.
+* **Dynamic User & Review Data Enrichment:** Enhances user profiles by aggregating `enrolledCourseIds` from the `enrollments` collection and enriches course reviews by incorporating reviewer `displayName` and `photoURL` via `$lookup` with the `user` collection.
+* **Mentor-Specific Course Access Control:** Provides secure retrieval of courses posted by a specific mentor, with access protected by the `varifyToken` middleware.
 
 ---
 
@@ -96,31 +71,31 @@ Make sure you have **Node.js** and **npm** installed. **MongoDB** should also be
 
 Here's a detailed overview of the API endpoints provided by this backend:
 
-| Method   | Endpoint                             | Description                                                                                                                                                                                                                                | Authentication |
+| Method | Endpoint | Description | Authentication |
 | :------- | :----------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :------------- |
-| `POST`   | `/jwt`                               | Generates and sets a JWT cookie for authenticated users.                                                                                                                                                                                   | Public         |
-| `POST`   | `/logout`                            | Clears the JWT cookie, effectively logging out the user.                                                                                                                                                                                   | Public         |
-| `POST`   | `/user`                              | Creates a new user in the database.                                                                                                                                                                                                        | Public         |
-| `GET`    | `/user/:uid`                         | Retrieves user details, including a list of enrolled course IDs from the `enrollments` collection.                                                                                                                                         | Public         |
-| `PUT`    | `/user/:uid`                         | Updates an existing user's data.                                                                                                                                                                                                           | Public         |
-| `POST`   | `/category`                          | Adds a new course category.                                                                                                                                                                                                                | Public         |
-| `GET`    | `/categories`                        | Retrieves a list of course categories. Supports query parameters: `limit`, `sortBy`, `orderBy`.                                                                                                                                            | Public         |
-| `POST`   | `/course`                            | Creates a new course entry in the database.                                                                                                                                                                                                | Public         |
-| `GET`    | `/course/:id`                        | Retrieves details for a specific course by its `_id`, including aggregated review count and average rating.                                                                                                                                | Public         |
-| `GET`    | `/course`                            | Retrieves all courses, with aggregated review count and average rating for each.                                                                                                                                                           | Public         |
-| `GET`    | `/courses/:uid`                      | Retrieves courses posted by a specific mentor (`mentorUID`).                                                                                                                                                                               | Requires JWT   |
-| `GET`    | `/courses`                           | Retrieves courses with advanced filtering, sorting, and limiting options. Query parameters: `filterBy` (e.g., "free", "price", or category name), `limit`, `sortBy`, `orderBy`.                                                            | Public         |
-| `PUT`    | `/course/:id`                        | Updates an existing course by its `_id`.                                                                                                                                                                                                   | Public         |
-| `DELETE` | `/course/:id`                        | Deletes a course by its `_id`.                                                                                                                                                                                                             | Public         |
-| `POST`   | `/review`                            | Adds a new review for a course.                                                                                                                                                                                                            | Public         |
-| `GET`    | `/reviewsByCourseId/:id`             | Retrieves all reviews for a given `courseId`, including reviewer's display name and photo.                                                                                                                                                 | Public         |
-| `DELETE` | `/review/:id`                        | Deletes a specific review by its `_id`.                                                                                                                                                                                                    | Public         |
-| `POST`   | `/enrollment`                        | Handles user enrollment and unenrollment in courses. Requires `uid`, `courseId`, and `enroll` status in the body. Utilizes **MongoDB Transactions** for atomic operations across multiple collections.                                  | Public         |
-| `GET`    | `/enrollments/:uid`                  | Retrieves all enrollments for a specific user, including details of the enrolled courses.                                                                                                                                                  | Requires JWT   |
-| `DELETE` | `/enrollment/:id`                    | Deletes a specific enrollment record by its `_id`.                                                                                                                                                                                         | Public         |
-| `POST`   | `/blog`                              | Creates a new blog post.                                                                                                                                                                                                                   | Public         |
-| `GET`    | `/blogs`                             | Retrieves all blog posts, including the author's display name and photo.                                                                                                                                                                   | Public         |
-| `GET`    | `/`                                  | Basic root endpoint to confirm the server is running.                                                                                                                                                                                      | Public         |
+| `POST` | `/jwt` | Generates and sets a JWT cookie for authenticated users. | Public |
+| `POST` | `/logout` | Clears the JWT cookie, effectively logging out the user. | Public |
+| `POST` | `/user` | Creates a new user in the database. | Public |
+| `GET` | `/user/:uid` | Retrieves user details, including a list of enrolled course IDs from the `enrollments` collection. | Public |
+| `PUT` | `/user/:uid` | Updates an existing user's data. | Public |
+| `POST` | `/category` | Adds a new course category. | Public |
+| `GET` | `/categories` | Retrieves a list of course categories. Supports query parameters: `limit`, `sortBy`, `orderBy`. | Public |
+| `POST` | `/course` | Creates a new course entry in the database. | Public |
+| `GET` | `/course/:id` | Retrieves details for a specific course by its `_id`, including aggregated review count and average rating. | Public |
+| `GET` | `/course` | Retrieves all courses, with aggregated review count and average rating for each. | Public |
+| `GET` | `/courses/:uid` | Retrieves courses posted by a specific mentor (`mentorUID`). | Requires JWT |
+| `GET` | `/courses` | Retrieves courses with advanced filtering, sorting, and limiting options. Query parameters: `filterBy` (e.g., "free", "price", or category name), `limit`, `sortBy`, `orderBy`. | Public |
+| `PUT` | `/course/:id` | Updates an existing course by its `_id`. | Public |
+| `DELETE` | `/course/:id` | Deletes a course by its `_id`. | Public |
+| `POST` | `/review` | Adds a new review for a course. | Public |
+| `GET` | `/reviewsByCourseId/:id` | Retrieves all reviews for a given `courseId`, including reviewer's display name and photo. | Public |
+| `DELETE` | `/review/:id` | Deletes a specific review by its `_id`. | Public |
+| `POST` | `/enrollment` | Handles user enrollment and unenrollment in courses. Requires `uid`, `courseId`, and `enroll` status in the body. Utilizes **MongoDB Transactions** for atomic operations across multiple collections. | Public |
+| `GET` | `/enrollments/:uid` | Retrieves all enrollments for a specific user, including details of the enrolled courses. | Requires JWT |
+| `DELETE` | `/enrollment/:id` | Deletes a specific enrollment record by its `_id`. | Public |
+| `POST` | `/blog` | Creates a new blog post. | Public |
+| `GET` | `/blogs` | Retrieves all blog posts, including the author's display name and photo. | Public |
+| `GET` | `/` | Basic root endpoint to confirm the server is running. | Public |
 
 ---
 
@@ -147,4 +122,3 @@ Distributed under the MIT License. See `LICENSE` for more information.
 ## 📞 Contact
 
 Shaharear Rahman Sabbir - imshaharear@gmail.com
-
