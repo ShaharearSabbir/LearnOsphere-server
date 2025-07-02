@@ -341,8 +341,81 @@ const run = async () => {
       }
     });
 
+    // app.get("/courses", async (req, res) => {
+    //   const { filterBy, limit, sortBy, orderBy } = req.query;
+
+    //   let aggregationPipeline = [];
+    //   let matchQuery = {};
+
+    //   if (filterBy) {
+    //     if (filterBy === "free") {
+    //       matchQuery.free = true;
+    //     } else if (filterBy === "price") {
+    //       matchQuery.free = { $ne: true };
+    //     } else {
+    //       matchQuery.category = filterBy;
+    //     }
+    //   }
+
+    //   if (Object.keys(matchQuery).length > 0) {
+    //     aggregationPipeline.push({ $match: matchQuery });
+    //   }
+
+    //   aggregationPipeline.push({
+    //     $addFields: {
+    //       courseIdString: { $toString: "$_id" },
+    //     },
+    //   });
+
+    //   aggregationPipeline.push({
+    //     $lookup: {
+    //       from: "reviews",
+    //       localField: "courseIdString",
+    //       foreignField: "courseId",
+    //       as: "courseReviews",
+    //     },
+    //   });
+
+    //   aggregationPipeline.push({
+    //     $addFields: {
+    //       numberOfReview: { $size: "$courseReviews" },
+    //       averageRating: { $round: [{ $avg: "$courseReviews.rating" }, 2] },
+    //     },
+    //   });
+
+    //   aggregationPipeline.push({
+    //     $project: {
+    //       courseIdString: 0,
+    //       courseReviews: 0,
+    //     },
+    //   });
+
+    //   let sortField = sortBy || "createdAt";
+    //   let sortOrder = orderBy === "asc" ? 1 : -1;
+
+    //   aggregationPipeline.push({
+    //     $sort: { [sortField]: sortOrder },
+    //   });
+
+    //   const parsedLimit = parseInt(limit);
+    //   if (!isNaN(parsedLimit) && parsedLimit > 0) {
+    //     aggregationPipeline.push({ $limit: parsedLimit });
+    //   }
+
+    //   try {
+    //     const result = await coursesCollection
+    //       .aggregate(aggregationPipeline)
+    //       .toArray();
+    //     res.send(result);
+    //   } catch (error) {
+    //     res.status(500).send("Error fetching courses from database.");
+    //   }
+    // });
+
+
     app.get("/courses", async (req, res) => {
-      const { filterBy, limit, sortBy, orderBy } = req.query;
+      const { filterBy, limit, sortBy, orderBy, search } = req.query;
+
 
       let aggregationPipeline = [];
       let matchQuery = {};
@@ -354,6 +427,22 @@ const run = async () => {
           matchQuery.free = { $ne: true };
         } else {
           matchQuery.category = filterBy;
+        }
+      }
+
+      if (search) {
+        const searchCondition = {
+          $or: [
+            { title: { $regex: search, $options: "i" } },
+            { category: { $regex: search, $options: "i" } },
+            { topics: { $regex: search, $options: "i" } },
+          ],
+        };
+
+        if (Object.keys(matchQuery).length > 0) {
+          matchQuery = { $and: [matchQuery, searchCondition] };
+        } else {
+          matchQuery = searchCondition;
         }
       }
 
@@ -721,5 +810,5 @@ app.get("/", (req, res) => {
 });
 
 app.listen(port, () => {
-  console.log(`Server is running on http://localhost/${port}`);
+  console.log(`Server is running on http://localhost:${port}`);
 });
